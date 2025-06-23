@@ -405,12 +405,16 @@ class MySQLMigration:
                 f"MASTER_AUTO_POSITION = 1, MASTER_SSL = {1 if self.source.ssl else 0}, "
                 "MASTER_SSL_VERIFY_SERVER_CERT = 0, MASTER_SSL_CA = '', MASTER_SSL_CAPATH = ''"
             )
+            if self.replica_channel <> None:
+                query += ", MASTER_AUTO_POSITION=1 FOR CHANNEL %s"
             if LooseVersion(self.target.version) >= LooseVersion("8.0.19"):
                 query += ", REQUIRE_ROW_FORMAT = 1"
             if LooseVersion(self.target.version) >= LooseVersion("8.0.20"):
                 query += ", REQUIRE_TABLE_PRIMARY_KEY_CHECK = OFF"
 
             query_params = [self.source.hostname, self.source.port, self.source.username, self.source.password]
+            if self.replica_channel <> None:
+                query_params.append(self.replica_channel)
 
             if self.privilege_check_user:
                 query += f", PRIVILEGE_CHECKS_USER = {self.privilege_check_user.sql_format}"
