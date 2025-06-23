@@ -53,6 +53,7 @@ class MySQLMigration:
         filter_dbs: Optional[str] = None,
         privilege_check_user: Optional[str] = None,
         output_meta_file: Optional[Path] = None,
+        replica_channel: Optional[str] = None
     ):
         self.mysqldump_proc: Optional[Popen] = None
         self.mysql_proc: Optional[Popen] = None
@@ -73,6 +74,7 @@ class MySQLMigration:
         if privilege_check_user:
             self.privilege_check_user = PrivilegeCheckUser.parse(privilege_check_user)
         self.output_meta_file = output_meta_file
+        self.replica_channel = replica_channel
 
     def setup_signal_handlers(self):
         signal.signal(signal.SIGINT, self._stop_migration)
