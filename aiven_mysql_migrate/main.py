@@ -66,6 +66,13 @@ def main(args: Sequence[str] = None, *, app: str = "mysql_migrate") -> Optional[
         action="store_true",
         help="Allow migrating from a source that has no migratable databases"
     )
+    parser.add_argument(
+        "--replica-channel",
+        type=str,
+        required=False
+        default=None
+        help="Add as channel for replication"
+    )
     parsed_args = parser.parse_args(args)
     setup_logging(debug=parsed_args.debug)
 
@@ -79,6 +86,7 @@ def main(args: Sequence[str] = None, *, app: str = "mysql_migrate") -> Optional[
         filter_dbs=parsed_args.filter_dbs,
         privilege_check_user=parsed_args.privilege_check_user,
         output_meta_file=parsed_args.output_meta_file,
+        channel=parsed_args.replica_channel
     )
     migration.setup_signal_handlers()
 
