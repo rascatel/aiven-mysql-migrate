@@ -72,6 +72,8 @@ optional arguments:
                         Output file which includes metadata such as dump GTIDs (for replication method only) in JSON format.
   --allow-source-without-dbs
                         Allow migrating from a source that has no migratable databases
+  --replica-channel CHANNEL_NAME
+                        Use a channel for replication
 ```
 
 The following environment variables are used by migration script:
