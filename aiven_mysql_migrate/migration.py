@@ -154,7 +154,7 @@ class MySQLMigration:
     def _check_user_can_replicate(self):
         LOGGER.info("Checking if user has replication grants on the source")
 
-        user_can_replicate = any(grant in self.source.global_grants for grant in ("REPLICATION SLAVE", "ALL PRIVILEGES"))
+        user_can_replicate = any(grant in self.source.global_grants for grant in ("REPLICATION REPLICATION", "ALL PRIVILEGES"))
         if not user_can_replicate:
             raise MissingReplicationGrants("User does not have replication permissions")
 
@@ -256,17 +256,17 @@ class MySQLMigration:
 
         return migration_method
 
-    def _stop_and_reset_slave(self):
+    def _stop_and_reset_replica(self):
         LOGGER.info("Stopping replication on target database")
 
         with self.target_source.cur() as cur:
-            cur.execute("STOP SLAVE")
-            cur.execute("RESET SLAVE ALL")
+            cur.execute("STOP replica")
+            cur.execute("RESET replica ALL")
 
     def _stop_replication(self):
         LOGGER.info("Stopping replication")
 
-        self._stop_and_reset_slave()
+        self._stop_and_reset_replica()
 
     def _get_dump_command(self, migration_method: MySQLMigrateMethod) -> List[str]:
         # "--flush-logs" and "--source-data=2" would be good options to add, but they do not work for RDS admin
@@ -431,27 +431,27 @@ class MySQLMigration:
                 f"CHANGE REPLICATION FILTER REPLICATE_WILD_IGNORE_TABLE = ({', '.join('%s' for _ in self.ignore_dbs)})",
                 [f"{db}.%" for db in self.ignore_dbs]
             )
-            cur.execute("START SLAVE")
+            cur.execute("START replica")
 
     def _ensure_target_replica_running(self, check_interval: float = 2.0, retries: int = 30):
         LOGGER.info("Ensure replica is running")
 
         with self.target.cur() as cur:
             for _ in range(retries):
-                cur.execute("SHOW SLAVE STATUS")
+                cur.execute("SHOW replica STATUS")
                 rows = cur.fetchall()
                 if not rows:
                     raise ReplicaSetupException()
 
                 try:
-                    slave_status = next(
+                    replica_status = next(
                         row for row in rows
                         if row["source_Host"] == self.source.hostname and row["source_Port"] == self.source.port
                     )
                 except StopIteration as e:
                     raise ReplicaSetupException() from e
 
-                if slave_status["Slave_IO_Running"] == "Yes" and slave_status["Slave_SQL_Running"] == "Yes":
+                if replica_status["replica_IO_Running"] == "Yes" and replica_status["replica_SQL_Running"] == "Yes":
                     return
 
                 time.sleep(check_interval)
@@ -463,20 +463,20 @@ class MySQLMigration:
 
         while True:
             with self.target.cur() as cur:
-                cur.execute("SHOW SLAVE STATUS")
+                cur.execute("SHOW replica STATUS")
                 rows = cur.fetchall()
                 if not rows:
                     raise ReplicaSetupException()
 
                 try:
-                    slave_status = next(
+                    replica_status = next(
                         row for row in rows
                         if row["source_Host"] == self.source.hostname and row["source_Port"] == self.source.port
                     )
                 except StopIteration as e:
                     raise ReplicaSetupException() from e
 
-                lag = slave_status["Seconds_Behind_source"]
+                lag = replica_status["Seconds_Behind_source"]
                 if lag is None:
                     raise ReplicaSetupException()
 
