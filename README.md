@@ -45,6 +45,37 @@ The tool requires `mysql-client` package 8.X, which can be installed from https:
 * Security definers are not transferred from the source database, they will be replaced with the import user
   (from `TARGET_SERVICE_URI`).
 
+## Installation
+```
+git clone https://github.com/Aiven-Open/aiven-mysql-migrate.git
+cd aiven-mysql-migrate
+echo "__version__ = '0.1.0'" > aiven_mysql_migrate/version.py
+
+# Install docker if not installed
+# Add Docker's official GPG key:
+sudo apt update
+sudo apt install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo usermod -aG docker $USER
+
+# Logout && Login
+
+sudo docker run hello-world
+sudo docker build --network=host -t aiven-mysql-migrate .
+docker run --network=host -it --rm aiven-mysql-migrate bash
+```
+
 ## Usage
 ```
 mysql_migrate --help
