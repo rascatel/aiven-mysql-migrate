@@ -107,8 +107,8 @@ class MySQLMigration:
         LOGGER.info("Checking MySQL versions for replication support")
 
         if (
-                LooseVersion("5.7.0") <= LooseVersion(self.source.version) < LooseVersion("8.1")
-                and LooseVersion("8.0.0") <= LooseVersion(self.target.version) < LooseVersion("8.1")
+                LooseVersion("5.7.0") <= LooseVersion(self.source.version) < LooseVersion("8.4.9")
+                and LooseVersion("8.0.0") <= LooseVersion(self.target.version) < LooseVersion("8.4.9")
         ):
             LOGGER.info("\tSource - %s, target - %s -- OK", self.source.version, self.target.version)
         else:
