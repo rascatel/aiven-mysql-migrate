@@ -438,7 +438,7 @@ class MySQLMigration:
 
         with self.target.cur() as cur:
             for _ in range(retries):
-                cur.execute("SHOW replica STATUS")
+                cur.execute("SHOW REPLICA STATUS")
                 rows = cur.fetchall()
                 if not rows:
                     raise ReplicaSetupException()
@@ -446,12 +446,12 @@ class MySQLMigration:
                 try:
                     replica_status = next(
                         row for row in rows
-                        if row["source_Host"] == self.source.hostname and row["source_Port"] == self.source.port
+                        if row["Source_Host"] == self.source.hostname and row["Source_Port"] == self.source.port
                     )
                 except StopIteration as e:
                     raise ReplicaSetupException() from e
 
-                if replica_status["replica_IO_Running"] == "Yes" and replica_status["replica_SQL_Running"] == "Yes":
+                if replica_status["Replica_IO_Running"] == "Yes" and replica_status["Replica_SQL_Running"] == "Yes":
                     return
 
                 time.sleep(check_interval)
@@ -463,7 +463,7 @@ class MySQLMigration:
 
         while True:
             with self.target.cur() as cur:
-                cur.execute("SHOW replica STATUS")
+                cur.execute("SHOW REPLICA STATUS")
                 rows = cur.fetchall()
                 if not rows:
                     raise ReplicaSetupException()
@@ -471,12 +471,12 @@ class MySQLMigration:
                 try:
                     replica_status = next(
                         row for row in rows
-                        if row["source_Host"] == self.source.hostname and row["source_Port"] == self.source.port
+                        if row["Source_Host"] == self.source.hostname and row["Source_Port"] == self.source.port
                     )
                 except StopIteration as e:
                     raise ReplicaSetupException() from e
 
-                lag = replica_status["Seconds_Behind_source"]
+                lag = replica_status["Seconds_Behind_Source"]
                 if lag is None:
                     raise ReplicaSetupException()
 
