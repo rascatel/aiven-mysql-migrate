@@ -403,7 +403,7 @@ class MySQLMigration:
                 "MASTER_SSL_VERIFY_SERVER_CERT = 0, MASTER_SSL_CA = '', MASTER_SSL_CAPATH = ''"
             )
             LOGGER.info(self.replica_channel)
-            if self.replica_channel <> "":
+            if self.replica_channel != None && self.replica_channel != "":
                 query += ", MASTER_AUTO_POSITION=1 FOR CHANNEL %s"
             if LooseVersion(self.target.version) >= LooseVersion("8.0.19"):
                 query += ", REQUIRE_ROW_FORMAT = 1"
@@ -411,7 +411,7 @@ class MySQLMigration:
                 query += ", REQUIRE_TABLE_PRIMARY_KEY_CHECK = OFF"
 
             query_params = [self.source.hostname, self.source.port, self.source.username, self.source.password]
-            if self.replica_channel <> None:
+            if self.replica_channel != None && self.replica_channel != "":
                 query_params.append(self.replica_channel)
 
             if self.privilege_check_user:
