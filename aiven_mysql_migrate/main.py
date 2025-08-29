@@ -86,7 +86,7 @@ def main(args: Sequence[str] | None = None, *, app: str = "mysql_migrate") -> Op
         filter_dbs=parsed_args.filter_dbs,
         privilege_check_user=parsed_args.privilege_check_user,
         output_meta_file=parsed_args.output_meta_file,
-        replica_channel=parsed_args.replica_channel
+        replica_channel=config.REPLICA_CHANNEL
     )
     migration.setup_signal_handlers()
 
