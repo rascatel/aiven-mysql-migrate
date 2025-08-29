@@ -47,7 +47,7 @@ The tool requires `mysql-client` package 8.X, which can be installed from https:
 
 ## Installation
 ```
-git clone https://github.com/Aiven-Open/aiven-mysql-migrate.git
+git clone https://github.com/rascatel/aiven-mysql-migrate.git
 cd aiven-mysql-migrate
 echo "__version__ = '0.1.0'" > aiven_mysql_migrate/version.py
 
