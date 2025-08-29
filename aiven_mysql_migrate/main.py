@@ -69,8 +69,8 @@ def main(args: Sequence[str] | None = None, *, app: str = "mysql_migrate") -> Op
     parser.add_argument(
         "--replica-channel",
         type=str,
-        required=False
-        default=None
+        required=False,
+        default=None,
         help="Add as channel for replication"
     )
     parsed_args = parser.parse_args(args)
