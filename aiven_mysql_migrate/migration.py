@@ -402,7 +402,8 @@ class MySQLMigration:
                 f"MASTER_AUTO_POSITION = 1, MASTER_SSL = {1 if self.source.ssl else 0}, "
                 "MASTER_SSL_VERIFY_SERVER_CERT = 0, MASTER_SSL_CA = '', MASTER_SSL_CAPATH = ''"
             )
-            if self.replica_channel <> None:
+            LOGGER.info(self.replica_channel)
+            if self.replica_channel <> "":
                 query += ", MASTER_AUTO_POSITION=1 FOR CHANNEL %s"
             if LooseVersion(self.target.version) >= LooseVersion("8.0.19"):
                 query += ", REQUIRE_ROW_FORMAT = 1"
