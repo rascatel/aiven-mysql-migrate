@@ -403,13 +403,13 @@ class MySQLMigration:
                 "SOURCE_SSL_VERIFY_SERVER_CERT = 0, SOURCE_SSL_CA = '', SOURCE_SSL_CAPATH = ''"
             )
             LOGGER.info(self.replica_channel)
-            if self.replica_channel != None and self.replica_channel != "":
-                query += ", SOURCE_AUTO_POSITION=1 FOR CHANNEL %s"
             if LooseVersion(self.target.version) >= LooseVersion("8.0.19"):
                 query += ", REQUIRE_ROW_FORMAT = 1"
             if LooseVersion(self.target.version) >= LooseVersion("8.0.20"):
                 query += ", REQUIRE_TABLE_PRIMARY_KEY_CHECK = OFF"
-
+            if self.replica_channel != None and self.replica_channel != "":
+                query += ", SOURCE_AUTO_POSITION=1 FOR CHANNEL %s"
+                
             query_params = [self.source.hostname, self.source.port, self.source.username, self.source.password]
             if self.replica_channel != None and self.replica_channel != "":
                 query_params.append(self.replica_channel)
