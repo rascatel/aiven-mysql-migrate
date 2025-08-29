@@ -26,7 +26,7 @@ def main(args: Sequence[str] | None = None, *, app: str = "mysql_migrate") -> Op
     )
     parser.add_argument("--validate-only", action="store_true", help="Run migration pre-checks only")
     parser.add_argument(
-        "--seconds-behind-master",
+        "--seconds-behind-source",
         type=int,
         default=-1,
         help="Max replication lag in seconds to wait for, by default no wait"
@@ -82,7 +82,7 @@ def main(args: Sequence[str] | None = None, *, app: str = "mysql_migrate") -> Op
     migration = MySQLMigration(
         source_uri=config.SOURCE_SERVICE_URI,
         target_uri=config.TARGET_SERVICE_URI,
-        target_master_uri=config.TARGET_MASTER_SERVICE_URI,
+        target_source_uri=config.TARGET_SOURCE_SERVICE_URI,
         filter_dbs=parsed_args.filter_dbs,
         privilege_check_user=parsed_args.privilege_check_user,
         output_meta_file=parsed_args.output_meta_file,
@@ -118,7 +118,7 @@ def main(args: Sequence[str] | None = None, *, app: str = "mysql_migrate") -> Op
     LOGGER.info("Starting migration using method: %s", migration_method)
     migration.start(
         migration_method=migration_method,
-        seconds_behind_master=parsed_args.seconds_behind_master,
+        seconds_behind_source=parsed_args.seconds_behind_source,
         stop_replication=parsed_args.stop_replication,
     )
 
