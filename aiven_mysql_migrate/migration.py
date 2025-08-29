@@ -40,7 +40,7 @@ class MySQLMigrateMethod(str, enum.Enum):
 class MySQLMigration:
     source: MySQLConnectionInfo
     target: MySQLConnectionInfo
-    target_master: MySQLConnectionInfo | None
+    target_source: MySQLConnectionInfo | None
 
     _databases: Optional[List[str]] = None
 
@@ -49,7 +49,7 @@ class MySQLMigration:
         *,
         source_uri: str,
         target_uri: str,
-        target_master_uri: Optional[str],
+        target_source_uri: Optional[str],
         filter_dbs: Optional[str] = None,
         privilege_check_user: Optional[str] = None,
         output_meta_file: Optional[Path] = None,
@@ -60,9 +60,9 @@ class MySQLMigration:
 
         self.source = MySQLConnectionInfo.from_uri(source_uri, name="source")
         self.target = MySQLConnectionInfo.from_uri(target_uri, name="target")
-        self.target_master = MySQLConnectionInfo.from_uri(
-            target_master_uri, name="target master"
-        ) if target_master_uri else None
+        self.target_source = MySQLConnectionInfo.from_uri(
+            target_source_uri, name="target source"
+        ) if target_source_uri else None
 
         self.ignore_dbs = config.IGNORE_SYSTEM_DATABASES.copy()
         if filter_dbs:
@@ -162,8 +162,8 @@ class MySQLMigration:
         LOGGER.info("Checking connections to service URIs")
 
         conn_infos = [self.source, self.target]
-        if self.target_master:
-            conn_infos.append(self.target_master)
+        if self.target_source:
+            conn_infos.append(self.target_source)
 
         for conn_info in conn_infos:
             try:
@@ -217,12 +217,12 @@ class MySQLMigration:
         if force_method is not None:
             LOGGER.info("Forcing migration method %r", migration_method)
 
-        if migration_method == MySQLMigrateMethod.replication and not self.target_master:
+        if migration_method == MySQLMigrateMethod.replication and not self.target_source:
             if not fallback_to_dump_method:
-                raise WrongMigrationConfigurationException("TARGET_MASTER_SERVICE_URI is not set")
+                raise WrongMigrationConfigurationException("TARGET_source_SERVICE_URI is not set")
 
             LOGGER.warning(
-                "Replication method is not available due to missing TARGET_MASTER_SERVICE_URI, falling back to dump"
+                "Replication method is not available due to missing TARGET_source_SERVICE_URI, falling back to dump"
             )
             migration_method = MySQLMigrateMethod.dump
 
@@ -259,7 +259,7 @@ class MySQLMigration:
     def _stop_and_reset_slave(self):
         LOGGER.info("Stopping replication on target database")
 
-        with self.target_master.cur() as cur:
+        with self.target_source.cur() as cur:
             cur.execute("STOP SLAVE")
             cur.execute("RESET SLAVE ALL")
 
@@ -269,7 +269,7 @@ class MySQLMigration:
         self._stop_and_reset_slave()
 
     def _get_dump_command(self, migration_method: MySQLMigrateMethod) -> List[str]:
-        # "--flush-logs" and "--master-data=2" would be good options to add, but they do not work for RDS admin
+        # "--flush-logs" and "--source-data=2" would be good options to add, but they do not work for RDS admin
         # user - require extra permissions for `FLUSH TABLES WITH READ LOCK`
         cmd = [
             "mysqldump",
@@ -379,8 +379,8 @@ class MySQLMigration:
 
     def _set_gtid(self, gtid: str):
         LOGGER.info("GTID from the dump is `%s`", gtid)
-        assert self.target_master is not None
-        with self.target_master.cur() as cur:
+        assert self.target_source is not None
+        with self.target_source.cur() as cur:
             # Check which of the source GTIDs are not yet applied - needed in case of running migration again on top
             # of finished one
             cur.execute("SELECT GTID_SUBTRACT(%s, @@GLOBAL.GTID_EXECUTED) AS DIFF", (gtid, ))
@@ -396,15 +396,15 @@ class MySQLMigration:
     def _start_replication(self):
         LOGGER.info("Setting up replication %s -> %s", self.source.hostname, self.target.hostname)
 
-        with self.target_master.cur() as cur:
+        with self.target_source.cur() as cur:
             query = (
-                "CHANGE MASTER TO MASTER_HOST = %s, MASTER_PORT = %s, MASTER_USER = %s, MASTER_PASSWORD = %s, "
-                f"MASTER_AUTO_POSITION = 1, MASTER_SSL = {1 if self.source.ssl else 0}, "
-                "MASTER_SSL_VERIFY_SERVER_CERT = 0, MASTER_SSL_CA = '', MASTER_SSL_CAPATH = ''"
+                "CHANGE REPLICATION SOURCE TO SOURCE_HOST = %s, SOURCE_PORT = %s, SOURCE_USER = %s, SOURCE_PASSWORD = %s, "
+                f"SOURCE_AUTO_POSITION = 1, SOURCE_SSL = {1 if self.source.ssl else 0}, "
+                "SOURCE_SSL_VERIFY_SERVER_CERT = 0, SOURCE_SSL_CA = '', SOURCE_SSL_CAPATH = ''"
             )
             LOGGER.info(self.replica_channel)
             if self.replica_channel != None and self.replica_channel != "":
-                query += ", MASTER_AUTO_POSITION=1 FOR CHANNEL %s"
+                query += ", SOURCE_AUTO_POSITION=1 FOR CHANNEL %s"
             if LooseVersion(self.target.version) >= LooseVersion("8.0.19"):
                 query += ", REQUIRE_ROW_FORMAT = 1"
             if LooseVersion(self.target.version) >= LooseVersion("8.0.20"):
@@ -446,7 +446,7 @@ class MySQLMigration:
                 try:
                     slave_status = next(
                         row for row in rows
-                        if row["Master_Host"] == self.source.hostname and row["Master_Port"] == self.source.port
+                        if row["source_Host"] == self.source.hostname and row["source_Port"] == self.source.port
                     )
                 except StopIteration as e:
                     raise ReplicaSetupException() from e
@@ -458,7 +458,7 @@ class MySQLMigration:
 
             raise ReplicaSetupException()
 
-    def _wait_for_replication(self, *, seconds_behind_master: int = 0, check_interval: float = 2.0):
+    def _wait_for_replication(self, *, seconds_behind_source: int = 0, check_interval: float = 2.0):
         LOGGER.info("Wait for replication to catch up")
 
         while True:
@@ -471,23 +471,23 @@ class MySQLMigration:
                 try:
                     slave_status = next(
                         row for row in rows
-                        if row["Master_Host"] == self.source.hostname and row["Master_Port"] == self.source.port
+                        if row["source_Host"] == self.source.hostname and row["source_Port"] == self.source.port
                     )
                 except StopIteration as e:
                     raise ReplicaSetupException() from e
 
-                lag = slave_status["Seconds_Behind_Master"]
+                lag = slave_status["Seconds_Behind_source"]
                 if lag is None:
                     raise ReplicaSetupException()
 
                 LOGGER.info("Current replication lag: %s seconds", lag)
-                if lag <= seconds_behind_master:
+                if lag <= seconds_behind_source:
                     return
 
             time.sleep(check_interval)
 
     def start(
-        self, *, migration_method: MySQLMigrateMethod, seconds_behind_master: int, stop_replication: bool = False
+        self, *, migration_method: MySQLMigrateMethod, seconds_behind_source: int, stop_replication: bool = False
     ) -> None:
         LOGGER.info("Start migration of the following databases:")
         for db in self.databases:
@@ -513,8 +513,8 @@ class MySQLMigration:
             self._start_replication()
             self._ensure_target_replica_running()
 
-            if seconds_behind_master > -1:
-                self._wait_for_replication(seconds_behind_master=seconds_behind_master)
+            if seconds_behind_source > -1:
+                self._wait_for_replication(seconds_behind_source=seconds_behind_source)
 
             if stop_replication:
                 self._stop_replication()
