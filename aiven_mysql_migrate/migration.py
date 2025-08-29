@@ -219,10 +219,10 @@ class MySQLMigration:
 
         if migration_method == MySQLMigrateMethod.replication and not self.target_source:
             if not fallback_to_dump_method:
-                raise WrongMigrationConfigurationException("TARGET_source_SERVICE_URI is not set")
+                raise WrongMigrationConfigurationException("TARGET_SOURCE_SERVICE_URI is not set")
 
             LOGGER.warning(
-                "Replication method is not available due to missing TARGET_source_SERVICE_URI, falling back to dump"
+                "Replication method is not available due to missing TARGET_SOURCE_SERVICE_URI, falling back to dump"
             )
             migration_method = MySQLMigrateMethod.dump
 
