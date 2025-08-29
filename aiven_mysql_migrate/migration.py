@@ -154,7 +154,7 @@ class MySQLMigration:
     def _check_user_can_replicate(self):
         LOGGER.info("Checking if user has replication grants on the source")
 
-        user_can_replicate = any(grant in self.source.global_grants for grant in ("REPLICATION REPLICATION", "ALL PRIVILEGES"))
+        user_can_replicate = any(grant in self.source.global_grants for grant in ("REPLICATION SLAVE", "ALL PRIVILEGES"))
         if not user_can_replicate:
             raise MissingReplicationGrants("User does not have replication permissions")
 
